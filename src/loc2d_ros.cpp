@@ -33,9 +33,9 @@
 
 #include "lama/ros/loc2d_ros.h"
 
-lama::Loc2DROS::Loc2DROS(const std::string &name) :
+lama::Loc2DROS::Loc2DROS(const rclcpp::NodeOptions& node_options) :
         transform_tolerance_(0, 100000000) {
-    node = rclcpp::Node::make_shared(name);
+    node = rclcpp::Node::make_shared("loc2d_ros", node_options);
 
     // Load parameters from the server.
     double tmp;
@@ -113,6 +113,10 @@ lama::Loc2DROS::Loc2DROS(const std::string &name) :
 
 lama::Loc2DROS::~Loc2DROS() {
 
+}
+
+rclcpp::node_interfaces::NodeBaseInterface::SharedPtr lama::Loc2DROS::get_node_base_interface() const {
+    return node->get_node_base_interface();
 }
 
 void lama::Loc2DROS::onInitialPose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr initial_pose) {
@@ -370,14 +374,4 @@ bool lama::Loc2DROS::initLaser(sensor_msgs::msg::LaserScan::ConstSharedPtr laser
 
     return true;
 
-}
-
-int main(int argc, char *argv[]) {
-    // https://github.com/ros2/examples/blob/master/rclcpp/minimal_publisher/not_composable.cpp
-
-    rclcpp::init(argc, argv);
-    lama::Loc2DROS loc2d_ros{"loc2d_ros"};
-    rclcpp::spin(loc2d_ros.node);
-    rclcpp::shutdown();
-    return 0;
 }

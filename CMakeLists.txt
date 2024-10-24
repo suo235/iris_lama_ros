@@ -41,6 +41,10 @@ find_package(tf2_sensor_msgs REQUIRED)
 
 find_package(iris_lama REQUIRED)
 
+rclcpp_components_register_node(loc2d_ros_component
+        PLUGIN "lama::Loc2DROS"
+        EXECUTABLE loc2d_ros)
+
 rclcpp_components_register_node(slam2d_ros_component
         PLUGIN "lama::Slam2DROS"
         EXECUTABLE slam2d_ros)

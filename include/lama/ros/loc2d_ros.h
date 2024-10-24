@@ -35,6 +35,7 @@
 
 // ROS includes
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_components/register_node_macro.hpp"
 #include <tf2_ros/message_filter.h>
 #include "tf2_ros/create_timer_ros.h"
 #include "tf2_ros/buffer.h"
@@ -68,9 +69,11 @@ namespace lama {
     class Loc2DROS {
     public:
 
-        Loc2DROS(const std::string &);
+        Loc2DROS(const rclcpp::NodeOptions& node_options);
 
         ~Loc2DROS();
+
+        rclcpp::node_interfaces::NodeBaseInterface::SharedPtr get_node_base_interface() const;
 
         void topic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr) const;
 
@@ -128,3 +131,4 @@ namespace lama {
 
 } /* lama */
 
+RCLCPP_COMPONENTS_REGISTER_NODE(lama::Loc2DROS)
