@@ -23,6 +23,7 @@ def generate_launch_description():
         #launch.actions.DeclareLaunchArgument('particles',      default_value="30", description=''),
         #launch.actions.DeclareLaunchArgument('threads',        default_value="4", description=''),
         #launch.actions.DeclareLaunchArgument('/use_sim_time',  default_value="True", description=''),
+        declare_use_composition_cmd,
         Node(
             package='iris_lama_ros2',
             namespace='iris_lama_ros2',
