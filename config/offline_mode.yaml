@@ -4,7 +4,6 @@
 
 /iris_lama_ros2/slam2d_ros:
   ros__parameters:
-    rosbag: True
     transform_tolerance: 0.1 
     use_sim_time: True
 
@@ -19,7 +18,6 @@
 
 /iris_lama_ros2/pf_slam2d_ros:
   ros__parameters:
-    rosbag: True
     transform_tolerance: 0.1
     use_sim_time: True
     
