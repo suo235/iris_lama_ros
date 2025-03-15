@@ -30,3 +30,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
+ #include "lama/ros/graph_slam2d_ros.h"
+
+ lama::GraphSlam2DROS::GraphSlam2DROS(const rclcpp::NodeOptions& node_options = rclcpp::NodeOptions().use_intra_process_comms(false))
+: rclcpp::Node("graph_slam2d_ros", node_options) {
+
+}
+
+lama::GraphSlam2DROS::~GraphSlam2DROS() {
+
+}

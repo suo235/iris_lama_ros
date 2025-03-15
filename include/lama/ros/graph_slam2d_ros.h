@@ -30,3 +30,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
+#pragma once
+
+// ROS includes
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp_components/register_node_macro.hpp"
+
+namespace lama {
+
+class GraphSlam2DROS : public rclcpp::Node {
+public:
+
+    GraphSlam2DROS(const rclcpp::NodeOptions& node_options);
+    ~GraphSlam2DROS();
+};
+
+} /* lama */
+
+RCLCPP_COMPONENTS_REGISTER_NODE(lama::GraphSlam2DROS)
