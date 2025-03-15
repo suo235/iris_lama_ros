@@ -31,13 +31,138 @@
  *
  */
 
- #include "lama/ros/graph_slam2d_ros.h"
+#include "tf2_ros/create_timer_ros.h"
+
+#include "lama/ros/graph_slam2d_ros.h"
+
+using std::placeholders::_1;
+using std::placeholders::_2;
 
  lama::GraphSlam2DROS::GraphSlam2DROS(const rclcpp::NodeOptions& node_options = rclcpp::NodeOptions().use_intra_process_comms(false))
-: rclcpp::Node("graph_slam2d_ros", node_options) {
+: rclcpp::Node("graph_slam2d_ros", node_options)
+, transform_tolerance_(0, 100000000) {
+    Pose2D initial_pose;
+    double map_publish_period;
 
+    this->declare_parameter("global_frame_id", "map");
+    this->declare_parameter("odom_frame_id", "odom");
+    this->declare_parameter("base_frame_id", "base_link");
+    this->declare_parameter("initial_pos_x", 0.0);
+    this->declare_parameter("initial_pos_y", 0.0);
+    this->declare_parameter("initial_pos_a", 0.0);
+    this->declare_parameter("max_range", 16.0);
+    this->declare_parameter("min_range", 0.0);
+    this->declare_parameter("beam_step", 1);
+    this->declare_parameter("publish_tf", true);
+    this->declare_parameter("publish_graph", true);
+    this->declare_parameter("transform_tolerance", 0.5);
+    this->declare_parameter("map_publish_period", 5.0);
+
+    this->declare_parameter("d_thresh", 0.25);
+    this->declare_parameter("a_thresh", 0.25);
+    this->declare_parameter("l2_max", 0.5);
+    this->declare_parameter("resolution", 0.05);
+    this->declare_parameter("strategy", "gn");
+    this->declare_parameter("key_pose_distance", 0.5);
+    this->declare_parameter("key_pose_angular_distance", 0.5 * M_PI);
+    this->declare_parameter("key_pose_head_delay", 3);
+    this->declare_parameter("loop_search_max_distance", 15.0);
+    this->declare_parameter("loop_search_min_distance", 5.0);
+    this->declare_parameter("loop_closure_scan_rmse", 0.075);
+    this->declare_parameter("loop_max_candidates", 5);
+    this->declare_parameter("ignore_n_chain_poses", 20);
+    this->declare_parameter("max_iterations", 100);
+    this->declare_parameter("patch_size", 32);
+
+    global_frame_ = this->get_parameter("global_frame_id").as_string();
+    odom_frame_ = this->get_parameter("odom_frame_id").as_string();
+    base_frame_ = this->get_parameter("base_frame_id").as_string();
+    initial_pose = Pose2D(
+        this->get_parameter("initial_pos_x").as_double(), 
+        this->get_parameter("initial_pos_y").as_double(), 
+        this->get_parameter("initial_pos_a").as_double()
+    );
+    max_range_ = this->get_parameter("max_range").as_double();
+    min_range_ = this->get_parameter("min_range").as_double();
+    beam_step_ = this->get_parameter("beam_step").as_int();
+    publish_tf_ = this->get_parameter("publish_tf").as_bool();
+    publish_graph_ = this->get_parameter("publish_graph").as_bool();
+    transform_tolerance_ = rclcpp::Duration::from_seconds(this->get_parameter("transform_tolerance").as_double());
+
+    map_publish_period = this->get_parameter("map_publish_period").as_double();
+
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+    auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
+        this->get_node_base_interface(),
+        this->get_node_timers_interface());
+    tf_buffer_->setCreateTimerInterface(timer_interface);
+
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+
+    GraphSlam2D::Options slam_options;
+    slam_options.trans_thresh = this->get_parameter("d_thresh").as_double();
+    slam_options.rot_thresh = this->get_parameter("a_thresh").as_double();
+    slam_options.l2_max = this->get_parameter("l2_max").as_double();
+    slam_options.resolution = this->get_parameter("resolution").as_double();
+    slam_options.strategy = this->get_parameter("strategy").as_string();
+    slam_options.key_pose_distance = this->get_parameter("key_pose_distance").as_double();
+    slam_options.key_pose_angular_distance = this->get_parameter("key_pose_angular_distance").as_double();
+    slam_options.key_pose_head_delay = this->get_parameter("key_pose_head_delay").as_int();
+    slam_options.loop_search_max_distance = this->get_parameter("loop_search_max_distance").as_double();
+    slam_options.loop_search_min_distance = this->get_parameter("loop_search_min_distance").as_double();
+    slam_options.loop_closure_scan_rmse = this->get_parameter("loop_closure_scan_rmse").as_double();
+    slam_options.loop_max_candidates = this->get_parameter("loop_max_candidates").as_int();
+    slam_options.ignore_n_chain_poses = this->get_parameter("ignore_n_chain_poses").as_int();
+    slam_options.max_iter = this->get_parameter("max_iterations").as_int();
+    slam_options.patch_size = this->get_parameter("patch_size").as_int();
+
+    slam2d_ = std::make_unique<GraphSlam2D>(slam_options);
+    slam2d_->Init(initial_pose);
+
+    data_sub_ = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::LaserScan>>(
+        this, "scan", rclcpp::QoS(rclcpp::SystemDefaultsQoS()).keep_last(100).get_rmw_qos_profile());
+    tf2_filter_ = std::make_shared<tf2_ros::MessageFilter<sensor_msgs::msg::LaserScan>>(
+        *data_sub_, *tf_buffer_, "odom", 20, this->get_node_logging_interface(),
+        this->get_node_clock_interface());
+    tf2_filter_->registerCallback(&lama::GraphSlam2DROS::slamExecutionCallback, this);
+
+    if(map_publish_period > 0.0)
+    {
+        periodic_map_publish_timer_ = this->create_wall_timer(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::milliseconds(static_cast<int>(map_publish_period * 1000.0))),
+            std::bind(&lama::GraphSlam2DROS::mapPublishCallback, this));
+    }
+
+    rclcpp::QoS map_qos(1);
+    map_qos.durability(rmw_qos_durability_policy_t::RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+    map_qos.reliability(rmw_qos_reliability_policy_t::RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+    map_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("map", map_qos);
+
+    transient_map_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("transient_map", 1);
+
+    pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("pose", 2);
+    
+    dist_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("distance", 1);
+
+    graph_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("graph", 1);
+
+    ss_ = this->create_service<nav_msgs::srv::GetMap>("dynamic_map", std::bind(&lama::GraphSlam2DROS::getMapServiceCallback, this, _1, _2));
 }
 
 lama::GraphSlam2DROS::~GraphSlam2DROS() {
+
+}
+
+void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr laser_scan) {
+
+}
+
+void lama::GraphSlam2DROS::mapPublishCallback() {
+
+}
+
+void lama::GraphSlam2DROS::getMapServiceCallback(const std::shared_ptr<nav_msgs::srv::GetMap::Request> request, std::shared_ptr<nav_msgs::srv::GetMap::Response> response) {
 
 }
