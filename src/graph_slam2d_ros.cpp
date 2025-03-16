@@ -32,6 +32,8 @@
  */
 
 #include "tf2_ros/create_timer_ros.h"
+#include "tf2/utils.h"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 
 #include "lama/ros/graph_slam2d_ros.h"
 
@@ -165,4 +167,22 @@ void lama::GraphSlam2DROS::mapPublishCallback() {
 
 void lama::GraphSlam2DROS::getMapServiceCallback(const std::shared_ptr<nav_msgs::srv::GetMap::Request> request, std::shared_ptr<nav_msgs::srv::GetMap::Response> response) {
 
+}
+
+/**
+ * @brief Get odometry data at specified time
+ * 
+ * @param stamp Timestamp we want to look up
+ * @return lama::Pose2D 
+ */
+lama::Pose2D lama::GraphSlam2DROS::getOdometry(const rclcpp::Time& stamp) {
+    geometry_msgs::msg::PoseStamped identity;
+    geometry_msgs::msg::PoseStamped odom_pose;
+
+    identity.header.frame_id = base_frame_;
+    identity.header.stamp = stamp;
+    identity.pose = geometry_msgs::msg::Pose();
+    tf_buffer_->transform(identity, odom_pose, odom_frame_);
+
+    return Pose2D(odom_pose.pose.position.x, odom_pose.pose.position.y, tf2::getYaw(odom_pose.pose.orientation));
 }

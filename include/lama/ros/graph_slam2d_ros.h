@@ -71,7 +71,8 @@ private:
     void slamExecutionCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr laser_scan);
     void mapPublishCallback();
     void getMapServiceCallback(const std::shared_ptr<nav_msgs::srv::GetMap::Request> request, std::shared_ptr<nav_msgs::srv::GetMap::Response> response);
-
+    Pose2D getOdometry(const rclcpp::Time& stamp);
+    
 private:
     std::string global_frame_;
     std::string odom_frame_;
