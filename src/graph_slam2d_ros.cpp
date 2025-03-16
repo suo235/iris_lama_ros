@@ -218,7 +218,13 @@ void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::Co
 }
 
 void lama::GraphSlam2DROS::mapPublishCallback() {
+    auto stamp = this->get_clock()->now();
 
+    auto map = lama_utils::convertOccupancyMapToMessage(*(slam2d_->generateOccupancyMap(true).get()), global_frame_, stamp);
+    map_pub_->publish(map);
+
+    auto transient_map = lama_utils::convertOccupancyMapToMessage(*(slam2d_->slam->getOccupancyMap()), global_frame_, stamp);
+    transient_map_pub_->publish(transient_map);
 }
 
 void lama::GraphSlam2DROS::getMapServiceCallback(const std::shared_ptr<nav_msgs::srv::GetMap::Request> request, std::shared_ptr<nav_msgs::srv::GetMap::Response> response) {
