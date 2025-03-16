@@ -228,7 +228,12 @@ void lama::GraphSlam2DROS::mapPublishCallback() {
 }
 
 void lama::GraphSlam2DROS::getMapServiceCallback(const std::shared_ptr<nav_msgs::srv::GetMap::Request> request, std::shared_ptr<nav_msgs::srv::GetMap::Response> response) {
+    static_cast<void>(request);  // To suppress compiler warning
 
+    // Make sure the graph is optimized
+    slam2d_->optimizePoseGraph();
+
+    response->map = lama_utils::convertOccupancyMapToMessage(*(slam2d_->generateOccupancyMap(true).get()), global_frame_, this->get_clock()->now());
 }
 
 /**
