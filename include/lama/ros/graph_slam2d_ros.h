@@ -58,6 +58,7 @@
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include "lama/graph_slam2d.h"
+#include "lama_utils.h"
 
 namespace lama {
 
@@ -72,7 +73,7 @@ private:
     void mapPublishCallback();
     void getMapServiceCallback(const std::shared_ptr<nav_msgs::srv::GetMap::Request> request, std::shared_ptr<nav_msgs::srv::GetMap::Response> response);
     Pose2D getOdometry(const rclcpp::Time& stamp);
-    
+
 private:
     std::string global_frame_;
     std::string odom_frame_;
@@ -86,6 +87,8 @@ private:
     rclcpp::Duration transform_tolerance_;
 
     std::unique_ptr<GraphSlam2D> slam2d_; 
+
+    std::unique_ptr<lama_utils::MarkersManager2D<GraphSlam2D>> markers_manager_;
 
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;

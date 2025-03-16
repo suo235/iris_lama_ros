@@ -122,6 +122,8 @@ using std::placeholders::_2;
     slam2d_ = std::make_unique<GraphSlam2D>(slam_options);
     slam2d_->Init(initial_pose);
 
+    markers_manager_ = std::make_unique<lama_utils::MarkersManager2D<GraphSlam2D>>(*(slam2d_.get()), global_frame_);
+
     data_sub_ = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::LaserScan>>(
         this, "scan", rclcpp::QoS(rclcpp::SystemDefaultsQoS()).keep_last(100).get_rmw_qos_profile());
     tf2_filter_ = std::make_shared<tf2_ros::MessageFilter<sensor_msgs::msg::LaserScan>>(
@@ -158,7 +160,61 @@ lama::GraphSlam2DROS::~GraphSlam2DROS() {
 }
 
 void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr laser_scan) {
+    try {
+        Pose2D odometry = getOdometry(laser_scan->header.stamp);
 
+        // Publish the last transform if nothing has changed.
+        if(!(slam2d_->enoughMotion(odometry))) {
+            if(publish_tf_) {
+                auto transform_map_to_odom = lama_utils::convertTransformToStampedMessage(
+                    latest_tf_odom_to_map_, 
+                    global_frame_, 
+                    odom_frame_, 
+                    rclcpp::Time(laser_scan->header.stamp) + transform_tolerance_);
+                tf_broadcaster_->sendTransform(transform_map_to_odom);
+            }
+
+            return;
+        }
+
+        auto transform_scan_to_base = tf_buffer_->lookupTransform(base_frame_, laser_scan->header.frame_id, laser_scan->header.stamp, rclcpp::Duration::from_nanoseconds(1));
+        auto cloud = lama_utils::convertLaserScanToPointCloud(*laser_scan, transform_scan_to_base.transform, beam_step_, min_range_, max_range_);
+        
+        auto start_time = this->get_clock()->now();
+        slam2d_->update(cloud, odometry, static_cast<double>(laser_scan->header.stamp.sec) + static_cast<double>(laser_scan->header.stamp.nanosec) * 0.001 * 0.001);
+        auto end_time = this->get_clock()->now();
+        RCLCPP_DEBUG(this->get_logger(), "Update time: %lf ms", static_cast<double>((end_time - start_time).nanoseconds()) / 1000.0 / 1000.0);
+        
+        // Update the transform and publish it
+        if(publish_tf_) {
+            // Compute transform from odom to base
+            auto transform_odom_to_base = tf_buffer_->lookupTransform(base_frame_, odom_frame_, laser_scan->header.stamp, rclcpp::Duration::from_nanoseconds(1));
+            tf2::Transform tf_odom_to_base;
+            tf2::fromMsg(transform_odom_to_base.transform, tf_odom_to_base);
+
+            // Compute transform from base to map
+            auto tf_base_to_map = lama_utils::convertPose2dToTransform(slam2d_->getPose());
+            
+            // Compute transform from odom to map
+            latest_tf_odom_to_map_ = tf_odom_to_base * tf_base_to_map;
+
+            auto transform_map_to_odom = lama_utils::convertTransformToStampedMessage(
+                latest_tf_odom_to_map_, 
+                global_frame_, 
+                odom_frame_, 
+                rclcpp::Time(laser_scan->header.stamp) + transform_tolerance_);
+            tf_broadcaster_->sendTransform(transform_map_to_odom);
+        }
+
+        if(publish_graph_) {
+            markers_manager_->update(laser_scan->header.stamp);
+            graph_pub_->publish(markers_manager_->getMarkers());
+        }
+
+    } catch (const tf2::TransformException& e) {
+        RCLCPP_WARN(this->get_logger(), "%s", e.what());
+        return;
+    }
 }
 
 void lama::GraphSlam2DROS::mapPublishCallback() {
