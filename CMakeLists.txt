@@ -53,6 +53,10 @@ rclcpp_components_register_node(pf_slam2d_ros_component
         PLUGIN "lama::PFSlam2DROS"
         EXECUTABLE pf_slam2d_ros)
 
+rclcpp_components_register_node(graph_slam2d_ros_component
+        PLUGIN "lama::GraphSlam2DROS"
+        EXECUTABLE graph_slam2d_ros)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
