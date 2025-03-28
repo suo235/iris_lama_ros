@@ -159,28 +159,6 @@ namespace lama_utils {
     }
 
     /**
-     * @brief Convert tf2::Transform object to geometry_msgs::msg::TransformStamped object
-     * 
-     * @param transform tf2::Transform to be converted
-     * @param parent_frame Parent frame id to be set on the message
-     * @param child_frame Child frame id to be set on the message
-     * @param stamp Timestamp to be set on the message
-     * @return geometry_msgs::msg::TransformStamped 
-     */
-    geometry_msgs::msg::TransformStamped convertTransformToStampedMessage(
-        const tf2::Transform& transform, 
-        const std::string& parent_frame, 
-        const std::string& child_frame, 
-        const rclcpp::Time& stamp) {
-        geometry_msgs::msg::TransformStamped tf_stamped;
-        tf_stamped.header.frame_id  = parent_frame;
-        tf_stamped.header.stamp     = stamp;
-        tf_stamped.child_frame_id   = child_frame;
-        tf2::convert<tf2::Transform, geometry_msgs::msg::Transform>(transform, tf_stamped.transform);
-        return tf_stamped;
-    }
-
-    /**
      * @brief Convert lama::Pose2D object to tf2::Transform object
      * 
      * @param pose Pose to be converted
