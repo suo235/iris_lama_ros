@@ -243,14 +243,14 @@ namespace lama_utils {
     }
 
     /**
-     * @brief Convert lama::OccupancyMap object to nav_msgs::msg::OccupancyGrid object
+     * @brief Create nav_msgs::msg::OccupancyGrid object from lama::OccupancyMap object
      * 
      * @param map Map to be converted
      * @param frame_id Frame id to be set on the message
      * @param stamp Timestamp to be set on the message
      * @return nav_msgs::msg::OccupancyGrid 
      */
-    nav_msgs::msg::OccupancyGrid convertOccupancyMapToMessage(
+    nav_msgs::msg::OccupancyGrid createOccupancyGrid(
         const lama::OccupancyMap& map, 
         const std::string& frame_id, 
         const rclcpp::Time& stamp) {
