@@ -193,7 +193,7 @@ void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::Co
             tf2::fromMsg(transform_odom_to_base.transform, tf_odom_to_base);
 
             // Compute transform from base to map
-            auto tf_base_to_map = lama_utils::convertPose2dToTransform(slam2d_->getPose());
+            auto tf_base_to_map = lama_utils::createTransform(slam2d_->getPose());
             
             // Compute transform from odom to map
             latest_tf_odom_to_map_ = tf_odom_to_base * tf_base_to_map;

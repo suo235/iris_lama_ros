@@ -164,7 +164,7 @@ namespace lama_utils {
      * @param pose Pose to be converted
      * @return tf2::Transform 
      */
-    tf2::Transform convertPose2dToTransform(const lama::Pose2D& pose) {
+    tf2::Transform createTransform(const lama::Pose2D& pose) {
         tf2::Quaternion q;
         q.setRPY(0.0, 0.0, pose.rotation());
         return tf2::Transform(q, tf2::Vector3(pose.x(), pose.y(), 0.0));
