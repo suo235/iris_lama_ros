@@ -178,7 +178,7 @@ void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::Co
         }
 
         auto transform_scan_to_base = tf_buffer_->lookupTransform(base_frame_, laser_scan->header.frame_id, laser_scan->header.stamp, rclcpp::Duration::from_nanoseconds(1));
-        auto cloud = lama_utils::convertLaserScanToPointCloud(*laser_scan, transform_scan_to_base.transform, beam_step_, min_range_, max_range_);
+        auto cloud = lama_utils::createPointCloud(*laser_scan, transform_scan_to_base.transform, beam_step_, min_range_, max_range_);
         
         auto start_time = this->get_clock()->now();
         slam2d_->update(cloud, odometry, static_cast<double>(laser_scan->header.stamp.sec) + static_cast<double>(laser_scan->header.stamp.nanosec) * 0.001 * 0.001);

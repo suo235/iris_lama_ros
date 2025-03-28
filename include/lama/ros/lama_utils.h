@@ -171,7 +171,7 @@ namespace lama_utils {
     }
 
     /**
-     * @brief Convert sensor_msgs::msg::LaserScan object to lama::PointCloudXYZ::Ptr object
+     * @brief Create lama::PointCloudXYZ::Ptr object from sensor_msgs::msg::LaserScan object
      * 
      * @param laser_scan LaserScan message to be converted
      * @param transform_base_to_scan Transform message holding transformation data from base to scan
@@ -180,7 +180,7 @@ namespace lama_utils {
      * @param max_laser_range Maximum range of the laser scan
      * @return lama::PointCloudXYZ::Ptr 
      */
-    lama::PointCloudXYZ::Ptr convertLaserScanToPointCloud(
+    lama::PointCloudXYZ::Ptr createPointCloud(
         const sensor_msgs::msg::LaserScan& laser_scan, 
         const geometry_msgs::msg::Transform& transform_base_to_scan, 
         const std::size_t beam_step, 
