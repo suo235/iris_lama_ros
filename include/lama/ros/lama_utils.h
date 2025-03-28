@@ -159,41 +159,19 @@ namespace lama_utils {
     }
 
     /**
-     * @brief Convert tf2::Transform object to geometry_msgs::msg::TransformStamped object
-     * 
-     * @param transform tf2::Transform to be converted
-     * @param parent_frame Parent frame id to be set on the message
-     * @param child_frame Child frame id to be set on the message
-     * @param stamp Timestamp to be set on the message
-     * @return geometry_msgs::msg::TransformStamped 
-     */
-    geometry_msgs::msg::TransformStamped convertTransformToStampedMessage(
-        const tf2::Transform& transform, 
-        const std::string& parent_frame, 
-        const std::string& child_frame, 
-        const rclcpp::Time& stamp) {
-        geometry_msgs::msg::TransformStamped tf_stamped;
-        tf_stamped.header.frame_id  = parent_frame;
-        tf_stamped.header.stamp     = stamp;
-        tf_stamped.child_frame_id   = child_frame;
-        tf2::convert<tf2::Transform, geometry_msgs::msg::Transform>(transform, tf_stamped.transform);
-        return tf_stamped;
-    }
-
-    /**
      * @brief Convert lama::Pose2D object to tf2::Transform object
      * 
      * @param pose Pose to be converted
      * @return tf2::Transform 
      */
-    tf2::Transform convertPose2dToTransform(const lama::Pose2D& pose) {
+    tf2::Transform createTransform(const lama::Pose2D& pose) {
         tf2::Quaternion q;
         q.setRPY(0.0, 0.0, pose.rotation());
         return tf2::Transform(q, tf2::Vector3(pose.x(), pose.y(), 0.0));
     }
 
     /**
-     * @brief Convert sensor_msgs::msg::LaserScan object to lama::PointCloudXYZ::Ptr object
+     * @brief Create lama::PointCloudXYZ::Ptr object from sensor_msgs::msg::LaserScan object
      * 
      * @param laser_scan LaserScan message to be converted
      * @param transform_base_to_scan Transform message holding transformation data from base to scan
@@ -202,7 +180,7 @@ namespace lama_utils {
      * @param max_laser_range Maximum range of the laser scan
      * @return lama::PointCloudXYZ::Ptr 
      */
-    lama::PointCloudXYZ::Ptr convertLaserScanToPointCloud(
+    lama::PointCloudXYZ::Ptr createPointCloud(
         const sensor_msgs::msg::LaserScan& laser_scan, 
         const geometry_msgs::msg::Transform& transform_base_to_scan, 
         const std::size_t beam_step, 
@@ -265,14 +243,14 @@ namespace lama_utils {
     }
 
     /**
-     * @brief Convert lama::OccupancyMap object to nav_msgs::msg::OccupancyGrid object
+     * @brief Create nav_msgs::msg::OccupancyGrid object from lama::OccupancyMap object
      * 
      * @param map Map to be converted
      * @param frame_id Frame id to be set on the message
      * @param stamp Timestamp to be set on the message
      * @return nav_msgs::msg::OccupancyGrid 
      */
-    nav_msgs::msg::OccupancyGrid convertOccupancyMapToMessage(
+    nav_msgs::msg::OccupancyGrid createOccupancyGrid(
         const lama::OccupancyMap& map, 
         const std::string& frame_id, 
         const rclcpp::Time& stamp) {

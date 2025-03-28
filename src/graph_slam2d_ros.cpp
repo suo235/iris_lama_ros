@@ -166,11 +166,11 @@ void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::Co
         // Publish the last transform if nothing has changed.
         if(!(slam2d_->enoughMotion(odometry))) {
             if(publish_tf_) {
-                auto transform_map_to_odom = lama_utils::convertTransformToStampedMessage(
+                auto transform_map_to_odom = lama_utils::createTransformStamped(
                     latest_tf_odom_to_map_, 
+                    rclcpp::Time(laser_scan->header.stamp) + transform_tolerance_, 
                     global_frame_, 
-                    odom_frame_, 
-                    rclcpp::Time(laser_scan->header.stamp) + transform_tolerance_);
+                    odom_frame_);
                 tf_broadcaster_->sendTransform(transform_map_to_odom);
             }
 
@@ -178,7 +178,7 @@ void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::Co
         }
 
         auto transform_scan_to_base = tf_buffer_->lookupTransform(base_frame_, laser_scan->header.frame_id, laser_scan->header.stamp, rclcpp::Duration::from_nanoseconds(1));
-        auto cloud = lama_utils::convertLaserScanToPointCloud(*laser_scan, transform_scan_to_base.transform, beam_step_, min_range_, max_range_);
+        auto cloud = lama_utils::createPointCloud(*laser_scan, transform_scan_to_base.transform, beam_step_, min_range_, max_range_);
         
         auto start_time = this->get_clock()->now();
         slam2d_->update(cloud, odometry, static_cast<double>(laser_scan->header.stamp.sec) + static_cast<double>(laser_scan->header.stamp.nanosec) * 0.001 * 0.001);
@@ -193,16 +193,16 @@ void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::Co
             tf2::fromMsg(transform_odom_to_base.transform, tf_odom_to_base);
 
             // Compute transform from base to map
-            auto tf_base_to_map = lama_utils::convertPose2dToTransform(slam2d_->getPose());
+            auto tf_base_to_map = lama_utils::createTransform(slam2d_->getPose());
             
             // Compute transform from odom to map
             latest_tf_odom_to_map_ = tf_odom_to_base * tf_base_to_map;
 
-            auto transform_map_to_odom = lama_utils::convertTransformToStampedMessage(
+            auto transform_map_to_odom = lama_utils::createTransformStamped(
                 latest_tf_odom_to_map_, 
+                rclcpp::Time(laser_scan->header.stamp) + transform_tolerance_, 
                 global_frame_, 
-                odom_frame_, 
-                rclcpp::Time(laser_scan->header.stamp) + transform_tolerance_);
+                odom_frame_);
             tf_broadcaster_->sendTransform(transform_map_to_odom);
         }
 
@@ -220,10 +220,10 @@ void lama::GraphSlam2DROS::slamExecutionCallback(sensor_msgs::msg::LaserScan::Co
 void lama::GraphSlam2DROS::mapPublishCallback() {
     auto stamp = this->get_clock()->now();
 
-    auto map = lama_utils::convertOccupancyMapToMessage(*(slam2d_->generateOccupancyMap(true).get()), global_frame_, stamp);
+    auto map = lama_utils::createOccupancyGrid(*(slam2d_->generateOccupancyMap(true).get()), global_frame_, stamp);
     map_pub_->publish(map);
 
-    auto transient_map = lama_utils::convertOccupancyMapToMessage(*(slam2d_->slam->getOccupancyMap()), global_frame_, stamp);
+    auto transient_map = lama_utils::createOccupancyGrid(*(slam2d_->slam->getOccupancyMap()), global_frame_, stamp);
     transient_map_pub_->publish(transient_map);
 }
 
@@ -233,7 +233,7 @@ void lama::GraphSlam2DROS::getMapServiceCallback(const std::shared_ptr<nav_msgs:
     // Make sure the graph is optimized
     slam2d_->optimizePoseGraph();
 
-    response->map = lama_utils::convertOccupancyMapToMessage(*(slam2d_->generateOccupancyMap(true).get()), global_frame_, this->get_clock()->now());
+    response->map = lama_utils::createOccupancyGrid(*(slam2d_->generateOccupancyMap(true).get()), global_frame_, this->get_clock()->now());
 }
 
 /**
